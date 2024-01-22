@@ -1,1 +1,68 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.18;
+
+import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Burnable.sol";
+
+contract Token is ERC20, Ownable, ERC20Burnable {
+    event PlayerRewarded(address indexed player, uint256 rewardMagnitude);
+    event ItemRedeemed(address indexed player, string item, uint256 costMagnitude);
+    event PlayerBalanceChecked(address indexed player, uint256 balanceMagnitude);
+    event RewardGiven(address indexed sender, address indexed receiver, uint256 rewardMagnitude);
+
+    enum BountyType {
+        Smartphone1,
+        Smartphone2,
+        Smartphone3
+    }
+
+    constructor(uint256 initialSupply, address initialOwner) ERC20("degen", "DGN") Ownable(initialOwner) {
+        _mint(initialOwner, initialSupply);
+    }
+
+    modifier hasBalance(uint256 magnitude) {
+        require(balanceOf(msg.sender) >= magnitude, "Not enough funds");
+        _;
+    }
+
+    function mintTokens(address to, uint256 magnitude) external onlyOwner {
+        _mint(to, magnitude);
+    }
+
+    function burnTokens(uint256 magnitude) external onlyOwner {
+        _burn(msg.sender, magnitude);
+    }
+
+    function redeemItem(BountyType bountyType) external hasBalance(getTokenCost(bountyType)) {
+        uint256 tokensToBurn = getTokenCost(bountyType);
+        string memory redeemedItem = getRedeemedItem(bountyType);
+
+        _burn(msg.sender, tokensToBurn);
+        emit ItemRedeemed(msg.sender, redeemedItem, tokensToBurn);
+    }
+
+    function checkPlayerBalance() external view returns (uint256) {
+        return balanceOf(msg.sender);
+    }
+
+    function rewardPlayer(address player, uint256 rewardMagnitude) external onlyOwner hasBalance(rewardMagnitude) {
+        _transfer(msg.sender, player, rewardMagnitude);
+        emit RewardGiven(msg.sender, player, rewardMagnitude);
+    }
+
+    function getTokenCost(BountyType bountyType) public pure returns (uint256) {
+        if (bountyType == BountyType.Smartphone1) return 200;
+        if (bountyType == BountyType.Smartphone2) return 400;
+        if (bountyType == BountyType.Smartphone3) return 800;
+        revert("Invalid bounty type");
+    }
+
+    function getRedeemedItem(BountyType bountyType) public pure returns (string memory) {
+        if (bountyType == BountyType.Smartphone1) return "Smartphone Model 1";
+        if (bountyType == BountyType.Smartphone2) return "Smartphone Model 2";
+        if (bountyType == BountyType.Smartphone3) return "Smartphone Model 3";
+        revert("Invalid bounty type");
+    }
+}
 
